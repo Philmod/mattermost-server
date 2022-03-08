@@ -178,7 +178,8 @@ func (a *App) SanitizePostMetadataForUser(post *model.Post, userID string) (*mod
 	}
 
 	if previewedChannel != nil && !a.HasPermissionToReadChannel(userID, previewedChannel) {
-		post = post.Clone()
+		fmt.Println("REMOVING METADATA -- SanitizePostMetadataForUser")
+
 		post.Metadata.Embeds[0].Data = nil
 	}
 
@@ -535,7 +536,11 @@ func (a *App) getLinkMetadata(requestURL string, timestamp int64, isNewPost bool
 
 		referencedTeam, appErr := a.GetTeam(referencedChannel.TeamId)
 		if appErr != nil {
-			return nil, nil, nil, appErr
+			if referencedChannel.Type == model.ChannelTypeDirect || referencedChannel.Type == model.ChannelTypeGroup {
+				referencedTeam = &model.Team{Name: ""}
+			} else {
+				return nil, nil, nil, appErr
+			}
 		}
 
 		// Get metadata for embedded post

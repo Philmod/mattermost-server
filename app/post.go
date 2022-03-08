@@ -727,7 +727,14 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 	}
 
 	for _, cm := range channelMembers {
-		postForUser, err := a.SanitizePostMetadataForUser(post, cm.UserId)
+		fmt.Println("publishWebSocketEventForPermalinkPost -- for channelMembers -- userID: ", cm.UserId)
+		fmt.Println(post.Metadata.Embeds[0])
+
+		postForUser := post.Clone()
+		postForUser, err := a.SanitizePostMetadataForUser(postForUser, cm.UserId)
+
+		fmt.Println("Post Metadata after Sanitize: ", post.Metadata.Embeds[0])
+
 		if err != nil {
 			if err.StatusCode == http.StatusNotFound {
 				mlog.Warn("channel containing permalinked post not found", mlog.String("referenced_channel_id", previewedPost.ChannelId))
