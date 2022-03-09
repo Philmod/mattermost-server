@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -302,12 +301,5 @@ func (a *App) SessionHasPermissionToManageBot(session model.Session, botUserId s
 }
 
 func (a *App) HasPermissionToReadChannel(userID string, channel *model.Channel) bool {
-	fmt.Println("HasPermissionToReadChannel")
-	fmt.Println("userID: ", userID)
-	fmt.Println("channelID: ", channel.Id)
-
-	b := a.HasPermissionToChannel(userID, channel.Id, model.PermissionReadChannel) || (channel.Type == model.ChannelTypeOpen && a.HasPermissionToTeam(userID, channel.TeamId, model.PermissionReadPublicChannel))
-	fmt.Println(b)
-
-	return b
+	return a.HasPermissionToChannel(userID, channel.Id, model.PermissionReadChannel) || (channel.Type == model.ChannelTypeOpen && a.HasPermissionToTeam(userID, channel.TeamId, model.PermissionReadPublicChannel))
 }
