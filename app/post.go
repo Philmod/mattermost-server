@@ -726,38 +726,49 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		return false, err
 	}
 
+	permalinkPreviewedPost := post.GetPreviewPost()
+	permalinkPreviewedChannel, err := a.GetChannel(permalinkPreviewedPost.Post.ChannelId)
+	if err != nil {
+		if err.StatusCode == http.StatusNotFound {
+			mlog.Warn("channel containing permalinked post not found", mlog.String("referenced_channel_id", previewedPost.ChannelId))
+			return false, nil
+		}
+		return false, err
+	}
+
+	sanitizedChannelMembersIDs := make([]string, 0, len(channelMembers))
 	for _, cm := range channelMembers {
-		fmt.Println("publishWebSocketEventForPermalinkPost -- for channelMembers -- userID: ", cm.UserId)
-		fmt.Println(post.Metadata.Embeds[0])
+		canSanitize := a.canSanitizePostMetadataForUser(post, permalinkPreviewedPost, permalinkPreviewedChannel, cm.UserId)
 
-		postForUser := post.Clone()
-		postForUser, err := a.SanitizePostMetadataForUser(postForUser, cm.UserId)
-
-		fmt.Println("Post Metadata after Sanitize: ", post.Metadata.Embeds[0])
-
-		if err != nil {
-			if err.StatusCode == http.StatusNotFound {
-				mlog.Warn("channel containing permalinked post not found", mlog.String("referenced_channel_id", previewedPost.ChannelId))
-				return false, nil
-			}
-			return false, err
+		if !canSanitize {
+			a.broadcastMessage(message, post, cm.UserId)
+		} else {
+			sanitizedChannelMembersIDs = append(sanitizedChannelMembersIDs, cm.UserId)
 		}
-		// Using DeepCopy here to avoid a race condition
-		// between publishing the event and setting the "post" data value below.
-		messageCopy := message.DeepCopy()
-		broadcastCopy := messageCopy.GetBroadcast()
-		broadcastCopy.UserId = cm.UserId
-		messageCopy.SetBroadcast(broadcastCopy)
+	}
 
-		postJSON, jsonErr := postForUser.ToJSON()
-		if jsonErr != nil {
-			mlog.Warn("Failed to encode post to JSON", mlog.Err(jsonErr))
-		}
-		messageCopy.Add("post", postJSON)
-		a.Publish(messageCopy)
+	postSanitized := a.SanitizePostMetadata(post)
+	for _, userID := range sanitizedChannelMembersIDs {
+		a.broadcastMessage(message, postSanitized, userID)
 	}
 
 	return true, nil
+}
+
+func (a *App) broadcastMessage(message *model.WebSocketEvent, post *model.Post, userID string) {
+	// Using DeepCopy here to avoid a race condition
+	// between publishing the event and setting the "post" data value below.
+	messageCopy := message.DeepCopy()
+	broadcastCopy := messageCopy.GetBroadcast()
+	broadcastCopy.UserId = userID
+	messageCopy.SetBroadcast(broadcastCopy)
+
+	postJSON, jsonErr := post.ToJSON()
+	if jsonErr != nil {
+		mlog.Warn("Failed to encode post to JSON", mlog.Err(jsonErr))
+	}
+	messageCopy.Add("post", postJSON)
+	a.Publish(messageCopy)
 }
 
 func (a *App) PatchPost(c *request.Context, postID string, patch *model.PostPatch) (*model.Post, *model.AppError) {

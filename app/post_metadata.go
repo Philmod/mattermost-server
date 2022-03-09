@@ -162,6 +162,25 @@ func (a *App) getEmbedsAndImages(post *model.Post, isNewPost bool) *model.Post {
 	return post
 }
 
+func (a *App) canSanitizePostMetadataForUser(post *model.Post, previewedPost *model.PreviewPost, previewedChannel *model.Channel, userID string) bool {
+	if post.Metadata == nil || len(post.Metadata.Embeds) == 0 || previewedPost == nil {
+		return false
+	}
+
+	if previewedChannel != nil && !a.HasPermissionToReadChannel(userID, previewedChannel) {
+		return true
+	}
+
+	return false
+}
+
+func (a *App) SanitizePostMetadata(post *model.Post) *model.Post {
+	if post.Metadata != nil && len(post.Metadata.Embeds) > 0 {
+		post.Metadata.Embeds[0].Data = nil
+	}
+	return post
+}
+
 func (a *App) SanitizePostMetadataForUser(post *model.Post, userID string) (*model.Post, *model.AppError) {
 	if post.Metadata == nil || len(post.Metadata.Embeds) == 0 {
 		return post, nil
@@ -178,8 +197,6 @@ func (a *App) SanitizePostMetadataForUser(post *model.Post, userID string) (*mod
 	}
 
 	if previewedChannel != nil && !a.HasPermissionToReadChannel(userID, previewedChannel) {
-		fmt.Println("REMOVING METADATA -- SanitizePostMetadataForUser")
-
 		post.Metadata.Embeds[0].Data = nil
 	}
 
