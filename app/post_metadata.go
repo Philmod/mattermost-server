@@ -551,23 +551,14 @@ func (a *App) getLinkMetadata(requestURL string, timestamp int64, isNewPost bool
 			return nil, nil, nil, appErr
 		}
 
-		referencedTeam, appErr := a.GetTeam(referencedChannel.TeamId)
-		if appErr != nil {
-			if referencedChannel.Type == model.ChannelTypeDirect || referencedChannel.Type == model.ChannelTypeGroup {
-				referencedTeam = &model.Team{Name: ""}
-			} else {
-				return nil, nil, nil, appErr
-			}
-		}
-
 		// Get metadata for embedded post
 		if a.containsPermalink(referencedPost) {
 			// referencedPost contains a permalink: we don't get its metadata
-			permalink = &model.Permalink{PreviewPost: model.NewPreviewPost(referencedPost, referencedTeam, referencedChannel)}
+			permalink = &model.Permalink{PreviewPost: model.NewPreviewPost(referencedPost, referencedChannel)}
 		} else {
 			// referencedPost does not contain a permalink: we get its metadata
 			referencedPostWithMetadata := a.PreparePostForClientWithEmbedsAndImages(referencedPost, false, false)
-			permalink = &model.Permalink{PreviewPost: model.NewPreviewPost(referencedPostWithMetadata, referencedTeam, referencedChannel)}
+			permalink = &model.Permalink{PreviewPost: model.NewPreviewPost(referencedPostWithMetadata, referencedChannel)}
 		}
 	} else {
 
