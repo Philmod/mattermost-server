@@ -2639,7 +2639,7 @@ func TestCanSanitizePostMetadataForUser(t *testing.T) {
 
 	// returns false when user can view metadata of post
 	userActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, th.BasicUser2.Id)
-	assert.Equal(t, false, userActual)
+	assert.False(t, userActual)
 
 	guestID := model.NewId()
 	guest := &model.User{
@@ -2654,7 +2654,7 @@ func TestCanSanitizePostMetadataForUser(t *testing.T) {
 
 	// returns true when user cannot view metadata of post
 	guestActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, guest.Id)
-	assert.Equal(t, true, guestActual)
+	assert.True(t, guestActual)
 }
 
 func TestSanitizePostMetadata(t *testing.T) {
