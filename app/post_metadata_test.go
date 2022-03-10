@@ -2602,3 +2602,85 @@ func TestContainsPermalink(t *testing.T) {
 		})
 	}
 }
+
+func TestCanSanitizePostMetadataForUser(t *testing.T) {
+	th := Setup(t).InitBasic()
+	defer th.TearDown()
+
+	th.App.UpdateConfig(func(cfg *model.Config) {
+		*cfg.ServiceSettings.EnableLinkPreviews = true
+		*cfg.ServiceSettings.SiteURL = "http://mymattermost.com"
+	})
+
+	directChannel, err := th.App.createDirectChannel(th.BasicUser.Id, th.BasicUser2.Id)
+	assert.Nil(t, err)
+
+	userID := model.NewId()
+	post := &model.Post{
+		Id: userID,
+		Metadata: &model.PostMetadata{
+			Embeds: []*model.PostEmbed{
+				{
+					Type: model.PostEmbedOpengraph,
+					URL:  "ogURL",
+					Data: &opengraph.OpenGraph{
+						Images: []*opengraph.Image{
+							{
+								URL: "imageURL",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	previewedPost := model.NewPreviewPost(post, th.BasicTeam, directChannel)
+
+	// returns false when user can view metadata of post
+	userActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, th.BasicUser2.Id)
+	assert.Equal(t, false, userActual)
+
+	guestID := model.NewId()
+	guest := &model.User{
+		Email:         "success+" + guestID + "@simulator.amazonses.com",
+		Username:      "un_" + guestID,
+		Nickname:      "nn_" + guestID,
+		Password:      "Password1",
+		EmailVerified: true,
+	}
+	guest, appErr := th.App.CreateGuest(th.Context, guest)
+	require.Nil(t, appErr)
+
+	// returns true when user cannot view metadata of post
+	guestActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, guest.Id)
+	assert.Equal(t, true, guestActual)
+}
+
+func TestSanitizePostMetadata(t *testing.T) {
+	th := Setup(t).InitBasic()
+	defer th.TearDown()
+
+	userID := model.NewId()
+	post := &model.Post{
+		Id: userID,
+		Metadata: &model.PostMetadata{
+			Embeds: []*model.PostEmbed{
+				{
+					Type: model.PostEmbedOpengraph,
+					URL:  "ogURL",
+					Data: &opengraph.OpenGraph{
+						Images: []*opengraph.Image{
+							{
+								URL: "imageURL",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	actual := th.App.sanitizePostMetadata(post)
+	assert.Nil(t, actual.Metadata.Embeds[0].Data)
+}
