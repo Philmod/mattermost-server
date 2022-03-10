@@ -747,7 +747,7 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		}
 	}
 
-	postSanitized := a.SanitizePostMetadata(post)
+	postSanitized := a.sanitizePostMetadata(post)
 	for _, userID := range sanitizedChannelMembersIDs {
 		a.broadcastMessage(message, postSanitized, userID)
 	}
