@@ -747,9 +747,11 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		}
 	}
 
-	postSanitized := a.sanitizePostMetadata(post)
-	for _, userID := range sanitizedChannelMembersIDs {
-		a.broadcastMessage(message, postSanitized, userID)
+	if len(sanitizedChannelMembersIDs) > 0 {
+		postSanitized := a.sanitizePostMetadata(post)
+		for _, userID := range sanitizedChannelMembersIDs {
+			a.broadcastMessage(message, postSanitized, userID)
+		}
 	}
 
 	return true, nil
