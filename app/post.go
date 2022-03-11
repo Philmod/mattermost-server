@@ -735,9 +735,13 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		return false, err
 	}
 
+	embedsLength := len(post.Metadata.Embeds)
 	permalinkPreviewedPost := post.GetPreviewPost()
 	for _, cm := range channelMembers {
-		post.Metadata.Embeds[0].Data = permalinkPreviewedPost
+		if post.Metadata != nil && embedsLength > 0 {
+			post.Metadata.Embeds[0].Data = permalinkPreviewedPost
+		}
+
 		postForUser := a.sanitizePostMetadataForUserAndChannel(post, permalinkPreviewedPost, permalinkPreviewedChannel, cm.UserId)
 
 		// Using DeepCopy here to avoid a race condition
