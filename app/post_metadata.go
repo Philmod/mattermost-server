@@ -162,22 +162,15 @@ func (a *App) getEmbedsAndImages(post *model.Post, isNewPost bool) *model.Post {
 	return post
 }
 
-func (a *App) canSanitizePostMetadataForUser(post *model.Post, previewedPost *model.PreviewPost, previewedChannel *model.Channel, userID string) bool {
+func (a *App) sanitizePostMetadataForUserAndChannel(post *model.Post, previewedPost *model.PreviewPost, previewedChannel *model.Channel, userID string) *model.Post {
 	if post.Metadata == nil || len(post.Metadata.Embeds) == 0 || previewedPost == nil {
-		return false
+		return post
 	}
 
 	if previewedChannel != nil && !a.HasPermissionToReadChannel(userID, previewedChannel) {
-		return true
-	}
-
-	return false
-}
-
-func (a *App) sanitizePostMetadata(post *model.Post) *model.Post {
-	if post.Metadata != nil && len(post.Metadata.Embeds) > 0 {
 		post.Metadata.Embeds[0].Data = nil
 	}
+
 	return post
 }
 

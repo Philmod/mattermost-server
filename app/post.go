@@ -736,41 +736,26 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		return false, err
 	}
 
-	sanitizedChannelMembersIDs := make([]string, 0, len(channelMembers))
 	for _, cm := range channelMembers {
-		canSanitize := a.canSanitizePostMetadataForUser(post, permalinkPreviewedPost, permalinkPreviewedChannel, cm.UserId)
+		post.Metadata.Embeds[0].Data = permalinkPreviewedPost
+		postForUser := a.sanitizePostMetadataForUserAndChannel(post, permalinkPreviewedPost, permalinkPreviewedChannel, cm.UserId)
 
-		if !canSanitize {
-			a.broadcastMessage(message, post, cm.UserId)
-		} else {
-			sanitizedChannelMembersIDs = append(sanitizedChannelMembersIDs, cm.UserId)
-		}
-	}
+		// Using DeepCopy here to avoid a race condition
+		// between publishing the event and setting the "post" data value below.
+		messageCopy := message.DeepCopy()
+		broadcastCopy := messageCopy.GetBroadcast()
+		broadcastCopy.UserId = cm.UserId
+		messageCopy.SetBroadcast(broadcastCopy)
 
-	if len(sanitizedChannelMembersIDs) > 0 {
-		postSanitized := a.sanitizePostMetadata(post)
-		for _, userID := range sanitizedChannelMembersIDs {
-			a.broadcastMessage(message, postSanitized, userID)
+		postJSON, jsonErr := postForUser.ToJSON()
+		if jsonErr != nil {
+			mlog.Warn("Failed to encode post to JSON", mlog.Err(jsonErr))
 		}
+		messageCopy.Add("post", postJSON)
+		a.Publish(messageCopy)
 	}
 
 	return true, nil
-}
-
-func (a *App) broadcastMessage(message *model.WebSocketEvent, post *model.Post, userID string) {
-	// Using DeepCopy here to avoid a race condition
-	// between publishing the event and setting the "post" data value below.
-	messageCopy := message.DeepCopy()
-	broadcastCopy := messageCopy.GetBroadcast()
-	broadcastCopy.UserId = userID
-	messageCopy.SetBroadcast(broadcastCopy)
-
-	postJSON, jsonErr := post.ToJSON()
-	if jsonErr != nil {
-		mlog.Warn("Failed to encode post to JSON", mlog.Err(jsonErr))
-	}
-	messageCopy.Add("post", postJSON)
-	a.Publish(messageCopy)
 }
 
 func (a *App) PatchPost(c *request.Context, postID string, patch *model.PostPatch) (*model.Post, *model.AppError) {

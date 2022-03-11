@@ -874,7 +874,6 @@ func TestCreatePost(t *testing.T) {
 		}
 
 		for _, testCase := range testCases {
-			testCase := testCase
 			t.Run(testCase.Description, func(t *testing.T) {
 				previewPost := &model.Post{
 					ChannelId: testCase.Channel.Id,
@@ -1354,7 +1353,6 @@ func TestUpdatePost(t *testing.T) {
 		}
 
 		for _, testCase := range testCases {
-			testCase := testCase
 			t.Run(testCase.Description, func(t *testing.T) {
 				previewPost := &model.Post{
 					ChannelId: testCase.Channel.Id,

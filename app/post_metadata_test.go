@@ -619,7 +619,6 @@ func TestPreparePostForClient(t *testing.T) {
 		}
 
 		for _, testCase := range testCases {
-			testCase := testCase
 			t.Run(testCase.Description, func(t *testing.T) {
 				referencedPost, err := th.App.CreatePost(th.Context, &model.Post{
 					UserId:    th.BasicUser.Id,
@@ -2667,7 +2666,7 @@ func TestContainsPermalink(t *testing.T) {
 	}
 }
 
-func TestCanSanitizePostMetadataForUser(t *testing.T) {
+func TestCanSanitizePostMetadataForUserAndChannel(t *testing.T) {
 	th := Setup(t).InitBasic()
 	defer th.TearDown()
 
@@ -2701,9 +2700,8 @@ func TestCanSanitizePostMetadataForUser(t *testing.T) {
 
 	previewedPost := model.NewPreviewPost(post, th.BasicTeam, directChannel)
 
-	// returns false when user can view metadata of post
-	userActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, th.BasicUser2.Id)
-	assert.False(t, userActual)
+	actual := th.App.sanitizePostMetadataForUserAndChannel(post, previewedPost, directChannel, th.BasicUser2.Id)
+	assert.NotNil(t, actual.Metadata.Embeds[0].Data)
 
 	guestID := model.NewId()
 	guest := &model.User{
@@ -2716,35 +2714,6 @@ func TestCanSanitizePostMetadataForUser(t *testing.T) {
 	guest, appErr := th.App.CreateGuest(th.Context, guest)
 	require.Nil(t, appErr)
 
-	// returns true when user cannot view metadata of post
-	guestActual := th.App.canSanitizePostMetadataForUser(post, previewedPost, directChannel, guest.Id)
-	assert.True(t, guestActual)
-}
-
-func TestSanitizePostMetadata(t *testing.T) {
-	th := Setup(t).InitBasic()
-	defer th.TearDown()
-
-	userID := model.NewId()
-	post := &model.Post{
-		Id: userID,
-		Metadata: &model.PostMetadata{
-			Embeds: []*model.PostEmbed{
-				{
-					Type: model.PostEmbedOpengraph,
-					URL:  "ogURL",
-					Data: &opengraph.OpenGraph{
-						Images: []*opengraph.Image{
-							{
-								URL: "imageURL",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	actual := th.App.sanitizePostMetadata(post)
+	actual = th.App.sanitizePostMetadataForUserAndChannel(post, previewedPost, directChannel, guest.Id)
 	assert.Nil(t, actual.Metadata.Embeds[0].Data)
 }
