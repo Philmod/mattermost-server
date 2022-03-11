@@ -726,8 +726,7 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		return false, err
 	}
 
-	permalinkPreviewedPost := post.GetPreviewPost()
-	permalinkPreviewedChannel, err := a.GetChannel(permalinkPreviewedPost.Post.ChannelId)
+	permalinkPreviewedChannel, err := a.GetChannel(previewedPost.ChannelId)
 	if err != nil {
 		if err.StatusCode == http.StatusNotFound {
 			mlog.Warn("channel containing permalinked post not found", mlog.String("referenced_channel_id", previewedPost.ChannelId))
@@ -736,6 +735,7 @@ func (a *App) publishWebsocketEventForPermalinkPost(post *model.Post, message *m
 		return false, err
 	}
 
+	permalinkPreviewedPost := post.GetPreviewPost()
 	for _, cm := range channelMembers {
 		post.Metadata.Embeds[0].Data = permalinkPreviewedPost
 		postForUser := a.sanitizePostMetadataForUserAndChannel(post, permalinkPreviewedPost, permalinkPreviewedChannel, cm.UserId)

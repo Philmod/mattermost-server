@@ -2666,7 +2666,7 @@ func TestContainsPermalink(t *testing.T) {
 	}
 }
 
-func TestCanSanitizePostMetadataForUserAndChannel(t *testing.T) {
+func TestSanitizePostMetadataForUserAndChannel(t *testing.T) {
 	th := Setup(t).InitBasic()
 	defer th.TearDown()
 

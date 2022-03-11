@@ -829,7 +829,6 @@ func TestCreatePost(t *testing.T) {
 	})
 
 	t.Run("sanitizes post metadata appropriately", func(t *testing.T) {
-
 		th := Setup(t).InitBasic()
 		defer th.TearDown()
 
@@ -840,7 +839,8 @@ func TestCreatePost(t *testing.T) {
 		th.AddUserToChannel(th.BasicUser, th.BasicChannel)
 
 		user1 := th.CreateUser()
-		directChannel, err := th.App.createDirectChannel(th.BasicUser.Id, user1.Id)
+		user2 := th.CreateUser()
+		directChannel, err := th.App.createDirectChannel(user1.Id, user2.Id)
 		require.Nil(t, err)
 
 		referencedPost := &model.Post{
@@ -859,16 +859,19 @@ func TestCreatePost(t *testing.T) {
 		testCases := []struct {
 			Description string
 			Channel     *model.Channel
+			Author      string
 			Assert      func(t assert.TestingT, object interface{}, msgAndArgs ...interface{}) bool
 		}{
 			{
 				Description: "removes metadata from post for members who cannot read channel",
 				Channel:     directChannel,
+				Author:      user1.Id,
 				Assert:      assert.Nil,
 			},
 			{
 				Description: "does not remove metadata from post for members who can read channel",
 				Channel:     th.BasicChannel,
+				Author:      th.BasicUser.Id,
 				Assert:      assert.NotNil,
 			},
 		}
@@ -878,7 +881,7 @@ func TestCreatePost(t *testing.T) {
 				previewPost := &model.Post{
 					ChannelId: testCase.Channel.Id,
 					Message:   permalink,
-					UserId:    th.BasicUser.Id,
+					UserId:    testCase.Author,
 				}
 
 				previewPost, err = th.App.CreatePost(th.Context, previewPost, testCase.Channel, false, false)
