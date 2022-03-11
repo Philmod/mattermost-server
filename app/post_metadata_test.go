@@ -585,6 +585,70 @@ func TestPreparePostForClient(t *testing.T) {
 		require.Equal(t, referencedPost.Id, preview.PostID)
 	})
 
+	t.Run("permalink previews for direct and group messages", func(t *testing.T) {
+		th := setup(t)
+		defer th.TearDown()
+
+		th.App.UpdateConfig(func(cfg *model.Config) {
+			*cfg.ServiceSettings.SiteURL = "http://mymattermost.com"
+		})
+
+		th.Context.Session().UserId = th.BasicUser.Id
+
+		directChannel, err := th.App.createDirectChannel(th.BasicUser.Id, th.BasicUser2.Id)
+		require.Nil(t, err)
+
+		groupChannel, err := th.App.createGroupChannel([]string{th.BasicUser.Id, th.BasicUser2.Id, th.CreateUser().Id})
+		require.Nil(t, err)
+
+		testCases := []struct {
+			Description string
+			Channel     *model.Channel
+			Expected    model.ChannelType
+		}{
+			{
+				Description: "direct message permalink preview",
+				Channel:     directChannel,
+				Expected:    model.ChannelType("D"),
+			},
+			{
+				Description: "group message permalink preview",
+				Channel:     groupChannel,
+				Expected:    model.ChannelType("G"),
+			},
+		}
+
+		for _, testCase := range testCases {
+			testCase := testCase
+			t.Run(testCase.Description, func(t *testing.T) {
+				referencedPost, err := th.App.CreatePost(th.Context, &model.Post{
+					UserId:    th.BasicUser.Id,
+					ChannelId: testCase.Channel.Id,
+					Message:   "hello world",
+				}, th.BasicChannel, false, true)
+				require.Nil(t, err)
+				referencedPost.Metadata.Embeds = nil
+
+				link := fmt.Sprintf("%s/%s/pl/%s", *th.App.Config().ServiceSettings.SiteURL, th.BasicTeam.Name, referencedPost.Id)
+
+				previewPost, err := th.App.CreatePost(th.Context, &model.Post{
+					UserId:    th.BasicUser.Id,
+					ChannelId: th.BasicChannel.Id,
+					Message:   link,
+				}, th.BasicChannel, false, true)
+				require.Nil(t, err)
+				previewPost.Metadata.Embeds = nil
+
+				clientPost := th.App.PreparePostForClientWithEmbedsAndImages(previewPost, false, false)
+				firstEmbed := clientPost.Metadata.Embeds[0]
+				preview := firstEmbed.Data.(*model.PreviewPost)
+
+				assert.Empty(t, preview.TeamName)
+				assert.Equal(t, testCase.Expected, preview.ChannelType)
+			})
+		}
+	})
+
 	t.Run("permalink with nested preview should have referenced post metadata", func(t *testing.T) {
 		th := setup(t)
 		defer th.TearDown()
